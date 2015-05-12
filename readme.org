@@ -1,0 +1,325 @@
+#+TITLE: Assignments
+#+AUTHOR: Allen Woods
+
+* Graph Provided
+     #+begin_src dot :file graph.png :cmdline -Kdot -Tpng
+         graph graphname {
+         rankdir=LR;
+         splines="line";
+         node [shape=circle, color="blue"];
+         K = 2
+
+                     v1 -- v2;
+                     v2 -- v3;
+     {rank = same; v4 transnode v5}
+              transnode[label = "" color="white" fixedsize = true width = 0]
+                     v3 -- v4, transnode, v5;
+                    transnode -- v6
+                     v4 -- transnode;
+ transnode -- v5;
+                     v4 -- v6;
+                     v5 -- v6;
+
+                     v6 --   v7;
+     {rank = same;  v8 v9}
+                     v7 -- v8, v9;
+                     v8 -- v9, v10;
+                     v9 -- v10;
+             }
+       #+end_src
+* Data Structure
+The calculation has been done by /Python 3.4/, along with the package /Numpy/ for linear computation.
+#+begin_src python
+import numpy as np
+import numpy.linalg as la
+
+class graph():
+    def __init__(self, graph_ID, edges_list=[], is_undirected = True):
+        self.ID = graph_ID
+        self.is_undirected = is_undirected
+        self.nodes = list()
+        self.edges = dict()
+        self.add_edge(edges_list)
+        self.adj_mtx = self.gen_adjmtx()
+
+    def update_node_list(self):
+        self.nodes.extend(self.edges.keys())
+
+    def add_edge(self, edges_list):
+        for edge in edges_list:
+            if edge[0] not in self.edges.keys():
+                self.edges[edge[0]] = list()
+            if edge[1] not in self.edges.keys():
+                self.edges[edge[1]] = list()
+            self.edges[edge[0]].append(edge[1])
+            if self.is_undirected:
+                self.edges[edge[1]].append(edge[0])
+        self.update_node_list()
+        self.adj_mtx = self.gen_adjmtx()
+
+    def gen_adjmtx(self):
+        length = len(self.nodes)
+        adjmtx = [[0 for n in range(length)] for n in range(length)]
+        for i in self.nodes:
+            for j in self.edges[i]:
+                adjmtx[i-1][j-1] = 1
+        return np.array(adjmtx)
+#+end_src
+
+* Degree Centrality
+
+** Code
+
+#+begin_src python
+def degree_centrality(graph):
+    degree = [sum(line) for line in graph.adj_mtx]
+    return degree
+#+end_src
+
+** Results
++-----+--------+-------------------+
+| No. | Vertex | Degree Centrality |
++-----+--------+-------------------+
+|  1  |   v3   |         4         |
+|  2  |   v6   |         4         |
+|  3  |   v7   |         3         |
+|  4  |   v8   |         3         |
+|  5  |   v9   |         3         |
+|  6  |   v4   |         3         |
+|  7  |   v5   |         3         |
+|  8  |  v10   |         2         |
+|  9  |   v2   |         2         |
+|  10 |   v1   |         1         |
++-----+--------+-------------------+
+
+* Eigenvector Centrality
+
+** Code
+
+#+begin_src python
+def eigenvector_centrality(graph):
+    return la.eigvals(graph.adj_mtx)
+#+end_src
+
+** Results
++-----+--------+------------------------+
+| No. | Vertex | Eigenvector Centrality |
++-----+--------+------------------------+
+|  1  |   v6   |     3.22438809664      |
+|  2  |   v7   |     2.53047982359      |
+|  3  |   v5   |     1.13143532836      |
+|  4  |   v4   |     0.254369213328     |
+|  5  |   v3   |    -0.524282801921     |
+|  6  |   v9   |          -1.0          |
+|  7  |   v3   |    -0.524282801921     |
+|  8  |   v4   |     0.254369213328     |
+|  9  |   v5   |     1.13143532836      |
+|  10 |   v6   |     3.22438809664      |
++-----+--------+------------------------+
+
+* Katz Centrality( \alpha=\beta = 0.3 )
+** Code
+ #+begin_src python
+def katz_centrality(graph, alpha=0.3, beta=0.3):
+    A = graph.adj_mtx
+    I = np.identity(len(A))
+    one = np.array([1 for i in range(len(A))])
+    katz =  np.dot(beta*np.matrix(I - alpha*A.T).I, one)
+    katz = np.array(katz)[0] # Change into list for further process
+    return (katz)
+#+end_src
+
+** Results
++-----+--------+-----------------+
+| No. | Vertex | Katz Centrality |
++-----+--------+-----------------+
+|  1  |   v6   |  12.1332142749  |
+|  2  |   v3   |   11.56235433   |
+|  3  |   v5   |  10.5838151164  |
+|  4  |   v4   |  10.5838151164  |
+|  5  |   v7   |  6.71406302025  |
+|  6  |   v8   |   4.6234978963  |
+|  7  |   v9   |   4.6234978963  |
+|  8  |   v2   |  4.24033659231  |
+|  9  |  v10   |  3.07409873778  |
+|  10 |   v1   |  1.57210097769  |
++-----+--------+-----------------+
+
+* PageRank Centrality
+** Code
+#+begin_src python
+def pagerank_centrality(graph):
+    A = graph.adj_mtx
+    I = np.identity(len(A))
+
+    D = np.identity(len(A))
+    count = 0
+    for i in A.sum(axis=1):
+        D[count] = np.multiply(D[count],i)
+        count += 1
+    D = np.mat(D)
+
+    alpha = 1/max(la.eigvals(A)) * 0.9
+    beta = 0.3
+    one = np.array([1 for i in range(len(A))])
+    pagerank = (beta*mat(I -mat((alpha*A.T).dot(D.I))).I.dot(one))
+    return pagerank.A1
+#+end_src
+
+** Results
++-----+--------+---------------------+
+| No. | Vertex | PageRank Centrality |
++-----+--------+---------------------+
+|  1  |   v3   |    0.466131435835   |
+|  2  |   v6   |    0.445403348595   |
+|  3  |   v2   |    0.433136511552   |
+|  4  |   v8   |    0.431495640145   |
+|  5  |   v9   |    0.431495640145   |
+|  6  |   v7   |    0.411374042689   |
+|  7  |   v4   |    0.400908400918   |
+|  8  |   v5   |    0.400908400918   |
+|  9  |  v10   |    0.380293493316   |
+|  10 |   v1   |    0.360449122239   |
++-----+--------+---------------------+
+
+* Betweenness Centrality
+** Code
+- First, we implement a DFS algorithm to find all path from a specific node to others
+
+  #+BEGIN_SRC python
+  def find_all_paths(edges, start, end, path=[]):
+        path = path + [start]
+        if start == end:
+            return [path]
+        if start not in edges:
+            return []
+        paths = []
+        for node in edges[start]:
+            if node not in path:
+                newpaths = find_all_paths(edges, node, end, path)
+                for newpath in newpaths:
+                    paths.append(newpath)
+        return paths
+  #+END_SRC
+
+- Then, we find all shortest path from each node in a graph
+  #+BEGIN_SRC Python
+import copy
+
+def find_shortest_paths(path_list):
+    shortest_paths = list()
+    shortest_len = min([len(l) for l in path_list])
+    for l in path_list:
+        if len(l) == shortest_len:
+            shortest_paths.append(l)
+    return shortest_paths
+
+def all_shortest_paths(graph):
+    nodes = graph.nodes
+    edges = graph.edges
+    shortest_path = list()
+    for node in nodes:
+        other_nodes = copy.deepcopy(nodes)
+        remove_list = list()
+        for n in other_nodes:
+            if n <= node:
+                remove_list.append(n)
+        for n in remove_list:
+            other_nodes.remove(n)
+        for other_n in other_nodes:
+            p = find_all_paths(edges,node, other_n)
+            sp = find_shortest_paths(p)
+            shortest_path.append(sp)
+    return(shortest_path)
+  #+END_SRC
+
+- Finally, we can calculate the betweenness centrality of each node
+  #+BEGIN_SRC python
+  def betweenness_centrality(graph):
+    shortest_paths = find.all_shortest_paths(graph)
+    nodes = graph.nodes
+    betweenness = list()
+    for n in nodes:
+        n_betweenness = 0
+        for paths in shortest_paths:
+            #print("%d:%s"%(n,str(paths)))
+            sub_n_betweenness = 0
+            for path in paths:
+                if n in path[1:-1]:
+                #Don't need the path has the node on both end
+                    sub_n_betweenness += 1
+            n_betweenness += (sub_n_betweenness/len(paths))*2
+        betweenness.append(n_betweenness)
+    return betweenness
+  #+END_SRC
+
+** Results
++-----+--------+------------------------+
+| No. | Vertex | Betweenness Centrality |
++-----+--------+------------------------+
+|  1  |   v6   |          40.0          |
+|  2  |   v7   |          36.0          |
+|  3  |   v3   |          28.0          |
+|  4  |   v2   |          16.0          |
+|  5  |   v8   |          7.0           |
+|  6  |   v9   |          7.0           |
+|  7  |  v10   |          0.0           |
+|  8  |   v1   |          0.0           |
+|  9  |   v4   |          0.0           |
+|  10 |   v5   |          0.0           |
++-----+--------+------------------------+
+
+* Closeness Centrality
+** Code
+   #+BEGIN_SRC python
+def closeness_centrality(graph):
+    shortest_paths = find.all_shortest_paths(graph)
+    nodes = graph.nodes
+    closeness = list()
+    for n in nodes:
+        n_closeness = 0
+        for paths in shortest_paths:
+            sub_n_closeness = 0
+            for path in paths:
+                if n not in path[:1] and n not in path[-1:]:
+                    break
+                else:
+                    sub_n_closeness = len(path)-1
+                    break
+            n_closeness += sub_n_closeness
+        closeness.append(1/(n_closeness/(len(nodes)-1)))
+    return closeness
+
+   #+END_SRC
+** Results
++-----+--------+----------------------+
+| No. | Vertex | Closeness Centrality |
++-----+--------+----------------------+
+|  1  |   v6   |        0.5625        |
+|  2  |   v7   |         0.5          |
+|  3  |   v3   |         0.5          |
+|  4  |   v4   | 0.44999999999999996  |
+|  5  |   v5   | 0.44999999999999996  |
+|  6  |   v8   |  0.391304347826087   |
+|  7  |   v9   |  0.391304347826087   |
+|  8  |   v2   |        0.375         |
+|  9  |  v10   |         0.3          |
+|  10 |   v1   |       0.28125        |
++-----+--------+----------------------+
+* Summary
+|                        | First Node | Second Node | Third Node |
+|------------------------+------------+-------------+------------|
+| Degree Centrality      | v_3        | v_6         | v_7        |
+| Eigenvector Centrality | v_6        | v_7         | v_5        |
+| Katz Centrality        | v_6        | v_3         | v_5        |
+| PageRank Centrality    | v_3        | v_6         | v_2        |
+| Betweenness Centrality | v_6        | v_7         | v_3        |
+| Closeness Centrality   | v_6        | v_7         | v_3        |
+
+Source Code has been provided in *GitHub*, after install /Python3/ and /Numpy/
+, use
+#+BEGIN_EXAMPLE
+python3 main.py
+#+END_EXAMPLE
+to calculate the centrality of a graph. Graph can be changed in main file by
+assign new edges.
